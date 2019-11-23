@@ -58,7 +58,7 @@ void identify_sink_source(vector<pair<string, string>> edges, string& sink, stri
     map<string, int> inlets, outlets;
 
     for (int i = 0; i < edges.size(); i++) {
-        //if it has been initialized, just increase it
+        //if node has been initialized, just increase its inlet count
         if (inlets.count(edges[i].first) != 0) {
             inlets[edges[i].first]++;
         }
@@ -67,7 +67,7 @@ void identify_sink_source(vector<pair<string, string>> edges, string& sink, stri
             inlets[edges[i].first] = 0;
         }
 
-        //if it has been initialized, just increase it
+        //if node has been initialized, just increase its outlet count
         if (outlets.count(edges[i].second) != 0) {
             outlets[edges[i].second]++;
         }
