@@ -2,6 +2,8 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <unordered_set>
+#include <set>
 
 using std::cout;
 using std::cin;
@@ -11,40 +13,61 @@ using std::vector;
 using std::getline;
 using std::pair;
 using std::map;
+using std::unordered_set;
+using std::set;
 
 struct graph {
-    vector<pair<string, string>> edges;
-    vector<string> nodelist;
+    set<pair<string, string>> edges;
+    unordered_set<string> nodelist;
     map<string, int> outlet;
     map<string, int> inlet;
     int N;
 };
 
 /**
- *  Process the input from input into machine readable vector of edges
+ *  Process the input from graph into printable string
  * 
- * \param graph a vector of string obtained from the input containing
- *              entries in the form of "X -> Y,Z"
+ * \param graph a struct graph containing the graph that needed to be output
  * 
- * \return  a vector of edges containg a pair of two nodes in the form
- *          {X, Y}
+ * \return  an output string containing the edgelist, inlet and outlet count
+ *          of each node
  */
 string output_process(struct graph graph) {
-    string output;
-    for (int i = 0; i < graph.edges.size(); i++) {
-        output += graph.edges[i].first + "->" + graph.edges[i].second + "\n";
+    string output = "";
+    //output node list
+    cout << "node list:\n";
+    for (auto const& i: graph.nodelist) {
+        cout << i << "\n";
     }
-    cout << "inlets: \n";
+    
+    //output edge list
+    cout << "edgelist:\n";
+    for (auto const& edge: graph.edges) {
+        cout << edge.first << "->" << edge.second << "\n";
+    }
+    //output inlet counts
+    cout << "inlets:\n";
     for (auto const &i: graph.inlet) {
         cout << i.first << ": " << i.second << "\n";
     }
-    cout << "outlets: \n";
+    //output outlet counts
+    cout << "outlets:\n";
     for (auto const &i: graph.outlet) {
         cout << i.first << ": " << i.second << "\n";
     }
+
     return output;
 }
 
+/**
+ *  Process the input from input into machine readable struct graph
+ * 
+ * \param graph_input   a vector of string obtained from the input containing
+ *                      entries in the form of "X -> Y,Z"
+ * 
+ * \return  a struct graph that contain edge list, node list, size, and inlet,
+ *          outlet count
+ */
 struct graph input_process(vector<string> graph_input) {
     struct graph graph;
 
@@ -58,8 +81,6 @@ struct graph input_process(vector<string> graph_input) {
         //catch the origin node
         int origin_end = temp.find(" -> ",0);
         origin = temp.substr(0, origin_end);
-        //append it to the nodelist        
-        graph.nodelist.push_back(origin);
         //check if origin is a registered node, if not initialize it
         if (graph.outlet.count(origin) != 1) {
             graph.outlet[origin] = 0;
@@ -73,8 +94,16 @@ struct graph input_process(vector<string> graph_input) {
             //catch this destination node
             int dest_end = temp.find(",", 0);
             destination = temp.substr(0, dest_end);
+            //append origin to the nodelist
+            if (graph.nodelist.count(origin) != 1) {
+                graph.nodelist.insert(origin);
+            }
+            //append destination to the nodelist
+            if (graph.nodelist.count(destination) != 1) {
+                graph.nodelist.insert(destination);
+            }
             //finalize the edge and store it into the edge list
-            graph.edges.push_back({origin, destination});
+            graph.edges.insert({origin, destination});
             //increase the outlet count of origin
             graph.outlet[origin]++;
             //check if destination is a registered node, if not then initialize it
@@ -90,15 +119,13 @@ struct graph input_process(vector<string> graph_input) {
         }
     }
     //fill in the zeros in inlet list
-    for (int i = 0; i < graph.nodelist.size(); i++) {
-        string node = graph.nodelist[i];
+    for (auto const& node: graph.nodelist) {
         if (graph.inlet.count(node) == 0) {
             graph.inlet[node] = 0;
         }
     }
     //fill in the zeros in outlet list
-    for (int i = 0; i < graph.nodelist.size(); i++) {
-        string node = graph.nodelist[i];
+    for (auto const& node: graph.nodelist) {
         if (graph.outlet.count(node) == 0) {
             graph.outlet[node] = 0;
         }
@@ -109,6 +136,24 @@ struct graph input_process(vector<string> graph_input) {
     return graph;  
 }
 
+/**
+ * find the sink and source of the given graph
+ * 
+ * \param graph     a struct graph that has nodelist, edgelist, inlet
+ *                  and outlet counts
+ * \param &sink     the sink to be returned to
+ * \param &source   the source to be returned to
+ */
+void findsinksource(struct graph graph, string &sink, string &source) {
+    for (auto const& node: graph.nodelist) {
+        if (graph.inlet[node] < graph.outlet[node]) {
+            source = node;
+        }
+        if (graph.inlet[node] > graph.outlet[node]) {
+            sink = node;
+        }
+    }
+}
 /**
  * Finds an Eulerian path in the given graph
  *
@@ -126,8 +171,16 @@ string eulerian_path(const vector<string>& graph) {
     //input processing
     eulerian_graph = input_process(graph);
     
-    //TODO: finish this
+    //find sink and source
     sink = "";
+    source = "";
+    findsinksource(eulerian_graph, sink, source);
+    cout << "\n" << "Sink: " << sink << ", Source: " << source << "\n";
+    
+    //add an edge between sink and source
+
+
+    
     //output
     output = output_process(eulerian_graph);
 
