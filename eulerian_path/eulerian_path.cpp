@@ -12,6 +12,14 @@ using std::getline;
 using std::pair;
 using std::map;
 
+struct graph {
+    vector<pair<string, string>> edges;
+    vector<string> nodelist;
+    map<string, int> outlet;
+    map<string, int> inlet;
+    int N;
+};
+
 /**
  *  Process the input from input into machine readable vector of edges
  * 
@@ -21,19 +29,41 @@ using std::map;
  * \return  a vector of edges containg a pair of two nodes in the form
  *          {X, Y}
  */
-vector<pair<string, string>> inputprocessing(const vector<string>& graph) {
-    
-    vector<pair<string, string>> edges;
-    
-    for (int i =0; i < graph.size(); i++) {
+string output_process(struct graph graph) {
+    string output;
+    for (int i = 0; i < graph.edges.size(); i++) {
+        output += graph.edges[i].first + "->" + graph.edges[i].second + "\n";
+    }
+    cout << "inlets: \n";
+    for (auto const &i: graph.inlet) {
+        cout << i.first << ": " << i.second << "\n";
+    }
+    cout << "outlets: \n";
+    for (auto const &i: graph.outlet) {
+        cout << i.first << ": " << i.second << "\n";
+    }
+    return output;
+}
+
+struct graph input_process(vector<string> graph_input) {
+    struct graph graph;
+
+    for (int i =0; i < graph_input.size(); i++) {
         
-        string temp = graph[i];
+        //define temporary stuff to be used during processing
+        string temp = graph_input[i];
         string origin = "";
         string destination = "";
         
         //catch the origin node
         int origin_end = temp.find(" -> ",0);
         origin = temp.substr(0, origin_end);
+        //append it to the nodelist        
+        graph.nodelist.push_back(origin);
+        //check if origin is a registered node, if not initialize it
+        if (graph.outlet.count(origin) != 1) {
+            graph.outlet[origin] = 0;
+        }
         //delete it from the temp string
         temp.erase(0, origin_end + 4);
         //add "," for uniformity
@@ -44,39 +74,39 @@ vector<pair<string, string>> inputprocessing(const vector<string>& graph) {
             int dest_end = temp.find(",", 0);
             destination = temp.substr(0, dest_end);
             //finalize the edge and store it into the edge list
-            edges.push_back({origin, destination});
+            graph.edges.push_back({origin, destination});
+            //increase the outlet count of origin
+            graph.outlet[origin]++;
+            //check if destination is a registered node, if not then initialize it
+            if (graph.inlet.count(destination) == 0) {
+                graph.inlet[destination] = 1;
+            }
+            //else we increase its inlet by one
+            else {
+                graph.inlet[destination]++;
+            }
             //delete that part
             temp.erase(0, dest_end + 1);
         }
-    }    
-
-    return edges;
-}
-
-void identify_sink_source(vector<pair<string, string>> edges, string& sink, string& source) {
-    
-    map<string, int> inlets, outlets;
-
-    for (int i = 0; i < edges.size(); i++) {
-        //if node has been initialized, just increase its inlet count
-        if (inlets.count(edges[i].first) != 0) {
-            inlets[edges[i].first]++;
-        }
-        //if not, initialize it
-        else {
-            inlets[edges[i].first] = 0;
-        }
-
-        //if node has been initialized, just increase its outlet count
-        if (outlets.count(edges[i].second) != 0) {
-            outlets[edges[i].second]++;
-        }
-        //if not, initialize it
-        else {
-            outlets[edges[i].second] = 0;
-        }
-
     }
+    //fill in the zeros in inlet list
+    for (int i = 0; i < graph.nodelist.size(); i++) {
+        string node = graph.nodelist[i];
+        if (graph.inlet.count(node) == 0) {
+            graph.inlet[node] = 0;
+        }
+    }
+    //fill in the zeros in outlet list
+    for (int i = 0; i < graph.nodelist.size(); i++) {
+        string node = graph.nodelist[i];
+        if (graph.outlet.count(node) == 0) {
+            graph.outlet[node] = 0;
+        }
+    }
+
+    //define the size of graph
+    graph.N = graph.nodelist.size();
+    return graph;  
 }
 
 /**
@@ -90,23 +120,19 @@ void identify_sink_source(vector<pair<string, string>> edges, string& sink, stri
  */
 string eulerian_path(const vector<string>& graph) {
     
-    vector<pair<string, string>> edges;
+    struct graph eulerian_graph;
     string sink, source;
-
+    string output;
     //input processing
-    edges = inputprocessing(graph);
+    eulerian_graph = input_process(graph);
     
     //TODO: finish this
-    identify_sink_source(edges, sink, source);
-
+    sink = "";
     //output
-    cout << "\n";
-    for (int i = 0; i < edges.size(); i++) {
-        cout << "{" << edges[i].first << ", " << edges[i].second << "}\n";
-    }
+    output = output_process(eulerian_graph);
 
 
-    return "";
+    return output;
 }
 
 
