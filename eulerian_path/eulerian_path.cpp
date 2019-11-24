@@ -37,43 +37,24 @@ struct graph {
     }
 };
 
-/**
- *  Process the input from graph into printable string
+/** Process the input from graph into printable string
  * 
  * \param graph a struct graph containing the graph that needed to be output
  * 
  * \return  an output string containing the edgelist, inlet and outlet count
  *          of each node
  */
-string output_process(struct graph graph) {
+string output_process(vector<pair<string, string>> path) {
     string output = "";
-    //output node list
-    cout << "node list:\n";
-    for (auto const& i: graph.nodelist) {
-        cout << i << "\n";
+    for (auto const& edge: path) {
+        output += edge.first + "->";
     }
-    
-    //output edge list
-    cout << "edgelist:\n";
-    for (auto const& edge: graph.edges) {
-        cout << edge.first << "->" << edge.second << "\n";
-    }
-    //output inlet counts
-    cout << "inlets:\n";
-    for (auto const &i: graph.inlet) {
-        cout << i.first << ": " << i.second << "\n";
-    }
-    //output outlet counts
-    cout << "outlets:\n";
-    for (auto const &i: graph.outlet) {
-        cout << i.first << ": " << i.second << "\n";
-    }
+    output += path.back().second;
 
     return output;
 }
 
-/**
- *  Process the input from input into machine readable struct graph
+/** Process the input from input into machine readable struct graph
  * 
  * \param graph_input   a vector of string obtained from the input containing
  *                      entries in the form of "X -> Y,Z"
@@ -151,8 +132,7 @@ struct graph input_process(vector<string> graph_input) {
     return graph;  
 }
 
-/**
- * find the sink and source of the given graph
+/** Find the sink and source of the given graph
  * 
  * \param graph     a struct graph that has nodelist, edgelist, inlet
  *                  and outlet counts
@@ -170,8 +150,19 @@ void findsinksource(struct graph graph, string &sink, string &source) {
     }
 }
 
-/**
- * Retravel a Eulerian path and get to the designated position start
+/** Print out the current path
+ * \param path  A vector<pair<string, string>> containing the egde list
+ *              in the path
+ * \return      A string representing the path
+ */
+void printpath(vector<pair<string, string>> path) {
+    for (auto const& edge: path) {
+        cout << edge.first << "->" << edge.second << ", ";
+    }
+    cout << "\n";
+}
+
+/** Retravel a Eulerian path and get to the designated position start
  * 
  * \param path		a vector of pair string containing the edge of the path
  * \param start		where the new start of the path should be
@@ -179,18 +170,20 @@ void findsinksource(struct graph graph, string &sink, string &source) {
  * \return a new path that started at the start position designated
  */
   
-vector<pair<string, string>> retravelpath(vector<pair<string,string>> path, int start) {
-	vector<pair<string, string>> output;
-	for (int i = path.size() - 1; i >= start; i--) {
-		path.insert(path.begin(),path.back());
-		path.erase(path.end());
+vector<pair<string, string>> retravelpath(vector<pair<string,string>> path, string start_node) {
+	vector<pair<string, string>> output = path;
+    //cout << "Original Path: \n";
+    //printpath(output);
+	while (output.back().second != start_node) {
+		output.insert(output.begin(),output.back());
+		output.erase(output.end());
 	}
-
-	return path;;
+    //cout << "Result:\n";
+    //printpath(output);
+	return output;
 }
 
-/**
- * Finds an Eulerian path in the given graph
+/** Finds an Eulerian path in the given graph
  *
  * \param graph     a vector of strings containing edges in the graph;
  *                  one string may correspond to multiple edges if it
@@ -203,6 +196,7 @@ string eulerian_path(const vector<string>& graph) {
     struct graph eulerian_graph;
     string sink, source;
     string output;
+    bool finish = false;
     //input processing
     eulerian_graph = input_process(graph);
     
@@ -211,48 +205,79 @@ string eulerian_path(const vector<string>& graph) {
     source = "";
     findsinksource(eulerian_graph, sink, source);
     string originalsource = source;
-    cout << "\n" << "Sink: " << sink << ", Source: " << source << "\n";
+    //cout << "\n" << "Sink: " << sink << ", Source: " << source << "\n";
     
     //add an edge between sink and source
-    eulerian_graph.addedge(source, sink);
+    eulerian_graph.addedge(sink, source);
 
     //invoke eulerian cycle algorithm starting at source
-    int edge_count = 0;
-    vector<pair<string, string>> cycle;
+    vector<pair<string, string>> eulerian_path;
+    unordered_set<string> cyclenodes;
     string start = source;
+    int total_egde = eulerian_graph.edges.size();
     //while there are still unaccounted edge
-    while (edge_count < eulerian_graph.nodelist.size()) {
+    while (eulerian_path.size() < total_egde) {
         //while there are available outlet
         while (eulerian_graph.outlet[start] > 0) {
-            //cycle through the deBruijin list of start
+            //cycle through the deBruijin set of start
+            //cout << "\norigin: " << start << "\n";
             for (auto const& node: eulerian_graph.deBruijin[start]) {
                 //guard against that one edge we put in
-                if ((start == source)&&(node == sink)) {
+                //cout << "destination: " << node << "\n";
+                /*if ((start == sink)&&(node == source)) {
                     eulerian_graph.deleteedge(start, node);
+                    cout << "\n uh-oh! \n";
+                    break;
                 }
-                else {
+                else {*/
                     //add this edge to the path
-                    cycle.push_back({start,node});
+                    eulerian_path.push_back({start,node});
+                    cyclenodes.insert(start);
+                    //cout << "Adding {" << start << ", " << node << "}\n";
                     //delete it so we won't do it twice
                     eulerian_graph.deleteedge(start, node);
                     //now start at the new node, loop again
                     start = node;
                     //break the for loop to go back to the while loop
                     break;
-                }
+                
             }
         }
         //if we are here, we are stuck since no outlet available
-        //for now just break
-        break;
+        //cout << "Initiate travel path\n";
+        int iterator = 0;
+        //to find new start, search in our cyclenodes list
+        for (auto const& node: cyclenodes) {
+            //if there exist a node with outlet count other than 0
+            //cout << "We are in the while loop, looking at: " << node << "\n";
+            if (eulerian_graph.outlet[node] != 0) {
+                //define new start at that node
+                start = node;
+                //rearrange the path to get to the new start again
+                eulerian_path = retravelpath(eulerian_path, node);
+                //break out of for loop
+                //cout << "new start:" << start << "\n";
+                break;
+            }
+            iterator++;
+        }
+        
+        //here is the end of the algorithm, everything should work!
     }
+
     //output
-    output = output_process(eulerian_graph);
-    cout << "path current: \n";
-for (auto const& edge: cycle) {
-    cout << edge.first << "->";
-}
-    cout << cycle.back().second;
+    //rotate to the extra edge we added
+    while ((eulerian_path.back().first != sink) || (eulerian_path.back().second != source)) {
+            eulerian_path.insert(eulerian_path.begin(), eulerian_path.back());
+            eulerian_path.pop_back();
+        }
+    //get rid of it
+    eulerian_path.pop_back();
+
+    output = output_process(eulerian_path);
+    
+    //cout << "PATH: \n";
+    //printpath(eulerian_path);
 
     return output;
 }
