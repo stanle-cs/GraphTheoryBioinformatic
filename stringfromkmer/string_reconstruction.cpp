@@ -19,7 +19,7 @@ using std::multiset;
 
 struct graph {
     multiset<pair<string, string>> edges;
-    unordered_set<string> nodelist;
+    set<string> nodelist;
     map<string, int> outlet;
     map<string, int> inlet;
     map<string, multiset<string>> deBruijin;
@@ -105,6 +105,7 @@ void findsinksource(struct graph graph, string &sink, string &source) {
             sink = node;
         }
     }
+    cout << "source: " << source << " sink: " << sink << "\n";
 }
 
 
@@ -244,7 +245,8 @@ string eulerian_path(const vector<string>& graph) {
 
     //in case no sink or source can be found, fall back into eulerian_cycle
     if ((sink =="") || (source =="")) {
-        unordered_set<string>::iterator cycle_it = eulerian_graph.nodelist.begin();
+        set<string>::iterator cycle_it = eulerian_graph.nodelist.begin();
+        //cout << "\nNode chosen as start: " << *cycle_it << "\n";
         eulerian_path = eulerian_cycle(eulerian_graph, *cycle_it);
         output = output_process(eulerian_path);
         return output;
@@ -299,7 +301,7 @@ vector<string> de_bruijn(const vector<string>& patterns) {
 	}
 	line.erase(line.length() -1);
     output.push_back(line);
-    //cout << line << "\n";
+    cout << line << "\n";
     }
     return output;
 }
