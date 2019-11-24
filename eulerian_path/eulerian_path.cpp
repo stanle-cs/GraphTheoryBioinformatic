@@ -21,7 +21,20 @@ struct graph {
     unordered_set<string> nodelist;
     map<string, int> outlet;
     map<string, int> inlet;
+    map<string, set<string>> deBruijin;
     int N;
+    void addedge(string origin, string destination) {
+        edges.insert({origin, destination});
+        deBruijin[origin].insert(destination);
+        outlet[origin]++;
+        inlet[destination]++;
+    }
+    void deleteedge(string origin, string destination) {
+        edges.erase({origin, destination});
+        deBruijin[origin].erase(destination);
+        outlet[origin]--;
+        inlet[destination]--;
+    }
 };
 
 /**
@@ -104,6 +117,8 @@ struct graph input_process(vector<string> graph_input) {
             }
             //finalize the edge and store it into the edge list
             graph.edges.insert({origin, destination});
+            //add the edge to the deBruijin Graph
+            graph.deBruijin[origin].insert(destination);
             //increase the outlet count of origin
             graph.outlet[origin]++;
             //check if destination is a registered node, if not then initialize it
@@ -154,6 +169,26 @@ void findsinksource(struct graph graph, string &sink, string &source) {
         }
     }
 }
+
+/**
+ * Retravel a Eulerian path and get to the designated position start
+ * 
+ * \param path		a vector of pair string containing the edge of the path
+ * \param start		where the new start of the path should be
+ * 
+ * \return a new path that started at the start position designated
+ */
+  
+vector<pair<string, string>> retravelpath(vector<pair<string,string>> path, int start) {
+	vector<pair<string, string>> output;
+	for (int i = path.size() - 1; i >= start; i--) {
+		path.insert(path.begin(),path.back());
+		path.erase(path.end());
+	}
+
+	return path;;
+}
+
 /**
  * Finds an Eulerian path in the given graph
  *
@@ -175,15 +210,49 @@ string eulerian_path(const vector<string>& graph) {
     sink = "";
     source = "";
     findsinksource(eulerian_graph, sink, source);
+    string originalsource = source;
     cout << "\n" << "Sink: " << sink << ", Source: " << source << "\n";
     
     //add an edge between sink and source
+    eulerian_graph.addedge(source, sink);
 
-
-    
+    //invoke eulerian cycle algorithm starting at source
+    int edge_count = 0;
+    vector<pair<string, string>> cycle;
+    string start = source;
+    //while there are still unaccounted edge
+    while (edge_count < eulerian_graph.nodelist.size()) {
+        //while there are available outlet
+        while (eulerian_graph.outlet[start] > 0) {
+            //cycle through the deBruijin list of start
+            for (auto const& node: eulerian_graph.deBruijin[start]) {
+                //guard against that one edge we put in
+                if ((start == source)&&(node == sink)) {
+                    eulerian_graph.deleteedge(start, node);
+                }
+                else {
+                    //add this edge to the path
+                    cycle.push_back({start,node});
+                    //delete it so we won't do it twice
+                    eulerian_graph.deleteedge(start, node);
+                    //now start at the new node, loop again
+                    start = node;
+                    //break the for loop to go back to the while loop
+                    break;
+                }
+            }
+        }
+        //if we are here, we are stuck since no outlet available
+        //for now just break
+        break;
+    }
     //output
     output = output_process(eulerian_graph);
-
+    cout << "path current: \n";
+for (auto const& edge: cycle) {
+    cout << edge.first << "->";
+}
+    cout << cycle.back().second;
 
     return output;
 }
